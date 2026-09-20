@@ -1896,8 +1896,22 @@ MAPA_TESTS = {
 
 
 
-st.sidebar.title("⚖️ Sistema Forense Online")
-rol = st.sidebar.radio("¿Cómo querés ingresar?", ["🧑‍⚖️ Soy Perito (Admin)", "🧑 Soy Evaluado (con Token)"], index=0)
+# --- DETECCIÓN AUTOMÁTICA DE LINK DE WHATSAPP ---
+# Si viene ?token= en la URL, forzar modo Evaluado para que no pida contraseña maestra
+query_params_init = st.query_params
+token_init = query_params_init.get("token", None)
+if token_init:
+    token_init_clean = token_init.strip().upper()
+    if not st.session_state.get("token_actual"):
+        st.session_state["token_actual"] = token_init_clean
+    # Forzar rol evaluado
+    rol = "🧑 Soy Evaluado (con Token)"
+    st.sidebar.title("⚖️ Sistema Forense Online")
+    st.sidebar.success(f"Link detectado: {token_init_clean}")
+    st.sidebar.info("Ingresando como Evaluado")
+else:
+    st.sidebar.title("⚖️ Sistema Forense Online")
+    rol = st.sidebar.radio("¿Cómo querés ingresar?", ["🧑‍⚖️ Soy Perito (Admin)", "🧑 Soy Evaluado (con Token)"], index=0)
 
 if rol == "🧑‍⚖️ Soy Perito (Admin)":
     st.title("Panel Perito - Control Central")
@@ -1938,10 +1952,11 @@ if rol == "🧑‍⚖️ Soy Perito (Admin)":
             "user_agent": ua
         })
         st.success(f"¡Clave generada!: {nuevo_token}")
-        base_url = "https://psi-forense-knto5bo9aobIpy73lw34o6.streamlit.app"
+        base_url = "https://mcmi-iv-nqsfb7xqw7vbyzpcrcene6.streamlit.app"  # URL real detectada
         link_completo = f"{base_url}/?token={nuevo_token}"
         st.code(link_completo, language="text")
-        st.info("Copiá este link y envialo por WhatsApp. Podés quedarte como Perito logueado y probar en incógnito. El evaluado puede hacer los 6 tests con el mismo código.")
+        st.success("✅ Link listo para WhatsApp - entra directo como Evaluado sin pedir contraseña")
+        st.info("Cuando el evaluado abra este link, entra automáticamente a 'Soy Evaluado' y no le pide contraseña maestra. Probalo en incógnito.")
 
     st.divider()
     st.subheader("📋 Estado de Claves y Evaluaciones - Código de Protocolo")
