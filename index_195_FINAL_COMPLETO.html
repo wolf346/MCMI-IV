@@ -284,7 +284,7 @@ const $ = s => document.getElementById(s);
 function render(){
   const total = ITEMS.length;
   $('counter').textContent = `Ítem ${idx+1} / ${total}`;
-  $('texto').textContent = `${ITEMS[idx].id}. ${ITEMS[idx].texto}`;
+  $('texto').textContent = `${ITEMS[idx].id}. ${ITEMS[idx].text}`;
   $('bar').style.width = `${((idx)/total*100)}%`;
   // marcar selección previa
   const prev = respuestas.find(x=>x.id===ITEMS[idx].id);
