@@ -2383,7 +2383,7 @@ else:
         dia_nombre = dias_map[ahora_ba.weekday()]
         
         # Valores fijos autocompletados
-        lic_auto = "Equipo Pericial"
+        lic_auto = "Aldo Montoya"
         plataforma_auto = "Google Meet / Zoom"
         dias_auto = f"{dia_nombre} {ahora_ba.strftime('%d/%m/%Y')}"
         anio_auto = str(ahora_ba.year)
@@ -2405,7 +2405,7 @@ else:
 
             Declaro que conozco los objetivos y las fases del Proceso de Peritación Psicológica llevado a cabo por la/el **Lic. {lic_auto}** con el propósito de elevar un Informe Psicológico.
 
-            Estoy dispuesto(a) a iniciar dicho proceso, siendo consciente que su contenido versa sobre diversos aspectos de mi historia vital. He sido informado que los encuentros se realizarán por la plataforma **{plataforma_auto}**, el día **{dias_auto}** del año **{anio_auto}** (hora oficial Argentina GMT-3) y que debo mantener el micrófono y la cámara constantemente encendidas, por tanto, firmo de manera voluntaria, bajo ningún tipo de imposición este documento.
+            Estoy dispuesto(a) a iniciar dicho proceso, siendo consciente que su contenido versa sobre diversos aspectos de mi historia vital. He sido informado que los encuentros se realizarán por la plataforma **{plataforma_auto}**, el día **{dias_auto}** (hora oficial Argentina GMT-3) y que debo mantener el micrófono y la cámara constantemente encendidas, por tanto, firmo de manera voluntaria, bajo ningún tipo de imposición este documento.
             """
             st.markdown(texto_consent)
 
