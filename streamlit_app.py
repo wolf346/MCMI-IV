@@ -2337,29 +2337,102 @@ else:
         st.stop()
     
     dp = datos_token.get("datos_persona") or {}
-    datos_completos = all([dp.get('nombre'), dp.get('apellido'), dp.get('edad'), dp.get('dni'), dp.get('localidad'), dp.get('consentimiento')])
+    # --- PASO 1: Datos personales (ampliado con nacionalidad) ---
+    datos_personales_completos = all([dp.get('nombre'), dp.get('apellido'), dp.get('edad'), dp.get('dni'), dp.get('localidad'), dp.get('nacionalidad')])
+    datos_completos = all([datos_personales_completos, dp.get('consentimiento')])
 
-    if not datos_completos:
+    if not datos_personales_completos:
         st.success(f"Código válido: {token_actual}")
         st.subheader("Paso 1: Completá tus datos personales")
         with st.form("form_datos_personales"):
             c1, c2 = st.columns(2)
-            nombre = c1.text_input("Nombre*", autocomplete="off")
-            apellido = c2.text_input("Apellido*", autocomplete="off")
-            c3, c4, c5 = st.columns(3)
-            edad = c3.number_input("Edad*", min_value=6, max_value=100, value=18)
-            dni = c4.text_input("DNI*", autocomplete="off")
-            localidad = c5.text_input("Localidad donde vivís*", autocomplete="off")
-            st.divider()
-            st.markdown("### Consentimiento Informado\nUsted participará en evaluación psicológica forense. Datos confidenciales Ley 26.657.")
-            consent = st.checkbox("✅ He leído y acepto el Consentimiento Informado*")
-            if st.form_submit_button("Aceptar y Continuar a los Tests", type="primary", use_container_width=True):
-                if not (nombre and apellido and dni and localidad and edad and consent):
-                    st.error("Completá todo y aceptá consentimiento.")
+            nombre = c1.text_input("Nombre*", value=dp.get('nombre',''), autocomplete="off")
+            apellido = c2.text_input("Apellido*", value=dp.get('apellido',''), autocomplete="off")
+            c3, c4, c5, c6 = st.columns(4)
+            edad = c3.number_input("Edad*", min_value=6, max_value=100, value=int(dp.get('edad',18)) if dp.get('edad') else 18)
+            dni = c4.text_input("DNI*", value=dp.get('dni',''), autocomplete="off")
+            localidad = c5.text_input("Localidad donde vivís*", value=dp.get('localidad',''), autocomplete="off")
+            nacionalidad = c6.text_input("Nacionalidad*", value=dp.get('nacionalidad','Argentina'), autocomplete="off")
+            if st.form_submit_button("Guardar datos y pasar al Consentimiento", type="primary", use_container_width=True):
+                if not (nombre and apellido and dni and localidad and nacionalidad and edad):
+                    st.error("Completá todos los campos obligatorios.")
                 else:
-                    dp.update({"nombre": nombre.strip(), "apellido": apellido.strip(), "edad": int(edad), "dni": dni.strip(), "localidad": localidad.strip(), "consentimiento": True, "fecha_consentimiento": datetime.now(TZ).strftime("%d/%m/%Y %H:%M")})
+                    dp.update({"nombre": nombre.strip(), "apellido": apellido.strip(), "edad": int(edad), "dni": dni.strip(), "localidad": localidad.strip(), "nacionalidad": nacionalidad.strip()})
                     datos_token["datos_persona"] = dp
                     guardar_token_db(token_actual, datos_token)
+                    st.rerun()
+        st.stop()
+
+    if not dp.get('consentimiento'):
+        st.success(f"Datos guardados: {dp.get('nombre')} {dp.get('apellido')} - DNI {dp.get('dni')}")
+        st.subheader("Paso 2: Consentimiento Informado Tele Evaluación Psicológica")
+        st.info("Leé detenidamente y completá los campos del consentimiento. Quedará guardado con firma digital (IP + hash).")
+
+        # Valores por defecto
+        lugar_fecha_default = dp.get('consent_lugar_fecha', f"{dp.get('localidad','')} - {datetime.now(TZ).strftime('%d/%m/%Y')}")
+        
+        with st.form("form_consentimiento_tele"):
+            st.markdown("### CONSENTIMIENTO INFORMADO TELE EVALUACIÓN PSICOLÓGICA")
+            
+            c_lugar = st.text_input("Lugar y Fecha*", value=lugar_fecha_default, placeholder="Ej: Esperanza, Santa Fe - 20/09/2026")
+            
+            st.markdown(f"**Yo:** {dp.get('nombre')} {dp.get('apellido')} **identificado con DNI:** {dp.get('dni')} **de Nacionalidad:** {dp.get('nacionalidad')}")
+            st.divider()
+            
+            st.markdown("Declaro que conozco los objetivos y las fases del Proceso de Peritación Psicológica llevado a cabo por:")
+            lic = st.text_input("Por la/el Lic.*", value=dp.get('consent_lic',''), placeholder="Ej: María García")
+            
+            st.markdown("Con el propósito de elevar un Informe Psicológico para ser presentado en:")
+            c_ex1, c_ex2, c_ex3 = st.columns(3)
+            expt = c_ex1.text_input("Expt:*", value=dp.get('consent_expt',''), placeholder="Ej: CUIJ")
+            exp_num = c_ex2.text_input("N°*", value=dp.get('consent_exp_num',''), placeholder="Ej: 12345/2025")
+            juzgado = c_ex3.text_input("Juzgado:*", value=dp.get('consent_juzgado',''), placeholder="Ej: Juzgado de Familia N°2")
+
+            st.markdown("He sido informado que los encuentros se realizarán por:")
+            c_plat1, c_plat2, c_plat3 = st.columns(3)
+            plataforma = c_plat1.text_input("Plataforma*", value=dp.get('consent_plataforma','Google Meet / Zoom'), placeholder="Google Meet")
+            dias = c_plat2.text_input("Días*", value=dp.get('consent_dias',''), placeholder="Ej: lunes y jueves")
+            anio = c_plat3.text_input("Año*", value=dp.get('consent_anio', str(datetime.now(TZ).year)), placeholder="2026")
+
+            st.divider()
+            # Texto legal final consolidado para visualización
+            texto_consent = f"""
+            **Lugar y Fecha:** {c_lugar}
+
+            Yo **{dp.get('nombre')} {dp.get('apellido')}** identificado con **DNI {dp.get('dni')}** de Nacionalidad **{dp.get('nacionalidad')}**
+
+            Declaro que conozco los objetivos y las fases del Proceso de Peritación Psicológica llevado a cabo por la/el **Lic. {lic}** con el propósito de elevar un Informe Psicológico para ser presentado en el **Expt: {expt} N° {exp_num} del Juzgado: {juzgado}**
+
+            Estoy dispuesto(a) a iniciar dicho proceso, siendo consciente que su contenido versa sobre diversos aspectos de mi historia vital. He sido informado que los encuentros se realizarán por la plataforma **{plataforma}**, los días **{dias}** del año **{anio}** y que debo mantener el micrófono y la cámara constantemente encendidas, por tanto, firmo de manera voluntaria, bajo ningún tipo de imposición este documento.
+            """
+            st.markdown(texto_consent)
+
+            st.divider()
+            consent_check = st.checkbox("✅ He leído, comprendido y acepto voluntariamente el Consentimiento Informado para Tele Evaluación*", value=False)
+            firma_check = st.checkbox("✅ Confirmo que mis datos (Nombre, DNI, Nacionalidad) son correctos y firmo digitalmente este documento*", value=False)
+
+            if st.form_submit_button("Firmar y Continuar a los Tests", type="primary", use_container_width=True):
+                if not (c_lugar and lic and expt and exp_num and juzgado and plataforma and dias and anio and consent_check and firma_check):
+                    st.error("Completá todos los campos del consentimiento y tildá ambas casillas para firmar.")
+                else:
+                    # Guardar todo
+                    texto_final = f"CONSENTIMIENTO INFORMADO TELE EVALUACION PSICOLOGICA - Lugar y Fecha: {c_lugar} - Yo {dp.get('nombre')} {dp.get('apellido')} identificado con DNI {dp.get('dni')} de Nacionalidad {dp.get('nacionalidad')} - Lic {lic} - Expt {expt} N° {exp_num} Juzgado {juzgado} - Plataforma {plataforma} dias {dias} anio {anio} - Acepta mantener microfono y camara encendidas - Firma voluntaria"
+                    dp.update({
+                        "consent_lugar_fecha": c_lugar.strip(),
+                        "consent_lic": lic.strip(),
+                        "consent_expt": expt.strip(),
+                        "consent_exp_num": exp_num.strip(),
+                        "consent_juzgado": juzgado.strip(),
+                        "consent_plataforma": plataforma.strip(),
+                        "consent_dias": dias.strip(),
+                        "consent_anio": anio.strip(),
+                        "consent_texto_final": texto_final,
+                        "consentimiento": True,
+                        "fecha_consentimiento": datetime.now(TZ).strftime("%d/%m/%Y %H:%M")
+                    })
+                    datos_token["datos_persona"] = dp
+                    guardar_token_db(token_actual, datos_token)
+                    st.success("Consentimiento firmado correctamente.")
                     st.rerun()
         st.stop()
 
