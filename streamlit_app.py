@@ -2337,8 +2337,8 @@ else:
         st.stop()
     
     dp = datos_token.get("datos_persona") or {}
-    # --- PASO 1: Datos personales (ampliado con nacionalidad) ---
-    datos_personales_completos = all([dp.get('nombre'), dp.get('apellido'), dp.get('edad'), dp.get('dni'), dp.get('localidad'), dp.get('nacionalidad')])
+    # --- PASO 1: Datos personales (ampliado con nacionalidad + lugar residencia) ---
+    datos_personales_completos = all([dp.get('nombre'), dp.get('apellido'), dp.get('edad'), dp.get('dni'), dp.get('localidad'), dp.get('nacionalidad'), dp.get('lugar_residencia')])
     datos_completos = all([datos_personales_completos, dp.get('consentimiento')])
 
     if not datos_personales_completos:
@@ -2348,16 +2348,26 @@ else:
             c1, c2 = st.columns(2)
             nombre = c1.text_input("Nombre*", value=dp.get('nombre',''), autocomplete="off")
             apellido = c2.text_input("Apellido*", value=dp.get('apellido',''), autocomplete="off")
-            c3, c4, c5, c6 = st.columns(4)
+            c3, c4, c5 = st.columns(3)
             edad = c3.number_input("Edad*", min_value=6, max_value=100, value=int(dp.get('edad',18)) if dp.get('edad') else 18)
             dni = c4.text_input("DNI*", value=dp.get('dni',''), autocomplete="off")
-            localidad = c5.text_input("Localidad donde vivís*", value=dp.get('localidad',''), autocomplete="off")
-            nacionalidad = c6.text_input("Nacionalidad*", value=dp.get('nacionalidad','Argentina'), autocomplete="off")
+            nacionalidad = c5.text_input("Nacionalidad*", value=dp.get('nacionalidad','Argentina'), autocomplete="off")
+            c6, c7 = st.columns(2)
+            localidad = c6.text_input("Localidad donde vivís*", value=dp.get('localidad',''), autocomplete="off")
+            lugar_residencia = c7.text_input("Lugar de Residencia*", value=dp.get('lugar_residencia',''), placeholder="Ej: Calle, N°, Barrio, Ciudad", autocomplete="off")
             if st.form_submit_button("Guardar datos y pasar al Consentimiento", type="primary", use_container_width=True):
-                if not (nombre and apellido and dni and localidad and nacionalidad and edad):
+                if not (nombre and apellido and dni and localidad and nacionalidad and lugar_residencia and edad):
                     st.error("Completá todos los campos obligatorios.")
                 else:
-                    dp.update({"nombre": nombre.strip(), "apellido": apellido.strip(), "edad": int(edad), "dni": dni.strip(), "localidad": localidad.strip(), "nacionalidad": nacionalidad.strip()})
+                    dp.update({
+                        "nombre": nombre.strip(), 
+                        "apellido": apellido.strip(), 
+                        "edad": int(edad), 
+                        "dni": dni.strip(), 
+                        "localidad": localidad.strip(), 
+                        "nacionalidad": nacionalidad.strip(),
+                        "lugar_residencia": lugar_residencia.strip()
+                    })
                     datos_token["datos_persona"] = dp
                     guardar_token_db(token_actual, datos_token)
                     st.rerun()
@@ -2381,12 +2391,6 @@ else:
             
             st.markdown("Declaro que conozco los objetivos y las fases del Proceso de Peritación Psicológica llevado a cabo por:")
             lic = st.text_input("Por la/el Lic.*", value=dp.get('consent_lic',''), placeholder="Ej: María García")
-            
-            st.markdown("Con el propósito de elevar un Informe Psicológico para ser presentado en:")
-            c_ex1, c_ex2, c_ex3 = st.columns(3)
-            expt = c_ex1.text_input("Expt:*", value=dp.get('consent_expt',''), placeholder="Ej: CUIJ")
-            exp_num = c_ex2.text_input("N°*", value=dp.get('consent_exp_num',''), placeholder="Ej: 12345/2025")
-            juzgado = c_ex3.text_input("Juzgado:*", value=dp.get('consent_juzgado',''), placeholder="Ej: Juzgado de Familia N°2")
 
             st.markdown("He sido informado que los encuentros se realizarán por:")
             c_plat1, c_plat2, c_plat3 = st.columns(3)
@@ -2395,13 +2399,13 @@ else:
             anio = c_plat3.text_input("Año*", value=dp.get('consent_anio', str(datetime.now(TZ).year)), placeholder="2026")
 
             st.divider()
-            # Texto legal final consolidado para visualización
+            # Texto legal final consolidado - SIN campos de expediente como pediste
             texto_consent = f"""
             **Lugar y Fecha:** {c_lugar}
 
             Yo **{dp.get('nombre')} {dp.get('apellido')}** identificado con **DNI {dp.get('dni')}** de Nacionalidad **{dp.get('nacionalidad')}**
 
-            Declaro que conozco los objetivos y las fases del Proceso de Peritación Psicológica llevado a cabo por la/el **Lic. {lic}** con el propósito de elevar un Informe Psicológico para ser presentado en el **Expt: {expt} N° {exp_num} del Juzgado: {juzgado}**
+            Declaro que conozco los objetivos y las fases del Proceso de Peritación Psicológica llevado a cabo por la/el **Lic. {lic}** con el propósito de elevar un Informe Psicológico.
 
             Estoy dispuesto(a) a iniciar dicho proceso, siendo consciente que su contenido versa sobre diversos aspectos de mi historia vital. He sido informado que los encuentros se realizarán por la plataforma **{plataforma}**, los días **{dias}** del año **{anio}** y que debo mantener el micrófono y la cámara constantemente encendidas, por tanto, firmo de manera voluntaria, bajo ningún tipo de imposición este documento.
             """
@@ -2412,17 +2416,14 @@ else:
             firma_check = st.checkbox("✅ Confirmo que mis datos (Nombre, DNI, Nacionalidad) son correctos y firmo digitalmente este documento*", value=False)
 
             if st.form_submit_button("Firmar y Continuar a los Tests", type="primary", use_container_width=True):
-                if not (c_lugar and lic and expt and exp_num and juzgado and plataforma and dias and anio and consent_check and firma_check):
+                if not (c_lugar and lic and plataforma and dias and anio and consent_check and firma_check):
                     st.error("Completá todos los campos del consentimiento y tildá ambas casillas para firmar.")
                 else:
-                    # Guardar todo
-                    texto_final = f"CONSENTIMIENTO INFORMADO TELE EVALUACION PSICOLOGICA - Lugar y Fecha: {c_lugar} - Yo {dp.get('nombre')} {dp.get('apellido')} identificado con DNI {dp.get('dni')} de Nacionalidad {dp.get('nacionalidad')} - Lic {lic} - Expt {expt} N° {exp_num} Juzgado {juzgado} - Plataforma {plataforma} dias {dias} anio {anio} - Acepta mantener microfono y camara encendidas - Firma voluntaria"
+                    # Guardar todo - sin expediente
+                    texto_final = f"CONSENTIMIENTO INFORMADO TELE EVALUACION PSICOLOGICA - Lugar y Fecha: {c_lugar} - Yo {dp.get('nombre')} {dp.get('apellido')} identificado con DNI {dp.get('dni')} de Nacionalidad {dp.get('nacionalidad')} - Lic {lic} - Plataforma {plataforma} dias {dias} anio {anio} - Acepta mantener microfono y camara encendidas - Firma voluntaria"
                     dp.update({
                         "consent_lugar_fecha": c_lugar.strip(),
                         "consent_lic": lic.strip(),
-                        "consent_expt": expt.strip(),
-                        "consent_exp_num": exp_num.strip(),
-                        "consent_juzgado": juzgado.strip(),
                         "consent_plataforma": plataforma.strip(),
                         "consent_dias": dias.strip(),
                         "consent_anio": anio.strip(),
