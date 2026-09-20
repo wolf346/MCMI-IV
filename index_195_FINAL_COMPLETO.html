@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCMI-IV - Cuestionario</title>
+<style>
+  body{font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#fafaf8;margin:0;color:#1a1a1a}
+  .wrap{max-width:720px;margin:0 auto;padding:24px 18px}
+  .card{background:#fff;border:1px solid #e7e5e4;border-radius:18px;padding:24px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  h1{font-size:20px;margin:0 0 6px;letter-spacing:-.02em}
+  .muted{color:#78716c;font-size:13px;line-height:1.5}
+  .item{font-size:20px;line-height:1.35;font-weight:500;margin:18px 0 22px;min-height:84px}
+  .btn{height:52px;border-radius:999px;border:1px solid #1c1917;background:#1c1917;color:#fff;font-weight:600;font-size:15px;width:100%;cursor:pointer}
+  .btn-outline{background:#fff;color:#1c1917;border-color:#d6d3d1}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .progress{height:6px;background:#e7e5e4;border-radius:999px;overflow:hidden;margin:12px 0}
+  .bar{height:100%;background:#4a6fb5;width:0%;transition:width .25s}
+  .small{font-size:12px;color:#a8a29e}
+  .hidden{display:none}
+  input[type=text],input[type=email]{width:100%;height:44px;border-radius:12px;border:1px solid #d6d3d1;padding:0 14px;font-size:14px;box-sizing:border-box}
+  .consent{border:1px dashed #d6d3d1;border-radius:12px;padding:14px;background:#fcfaf8;font-size:13px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="setup" class="card">
+    <h1>MCMI-IV — Administración</h1>
+    <p class="muted">Cuestionario administrado por profesional. Duración 20-30 min. Hacelo en lugar tranquilo, sin interrupciones.</p>
+    <div class="consent" style="margin:14px 0">
+      <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+        <input type="checkbox" id="acepto" style="margin-top:3px">
+        <span>Acepto que mis respuestas son confidenciales y se usarán solo con fines de evaluación clínica (Ley 25.326 - Protección de Datos Personales - Argentina). Entiendo que debo responder con la mayor sinceridad posible.</span>
+      </label>
+    </div>
+    <div style="display:grid;gap:10px;margin-top:12px">
+      <input type="text" id="codigo" placeholder="Tus iniciales o código (ej: AM-01)">
+      <button class="btn" id="startBtn">Comenzar cuestionario</button>
+      <p class="small">Al finalizar, tus respuestas se enviarán automáticamente al profesional.</p>
+    </div>
+  </div>
+
+  <div id="test" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="small" id="counter">Ítem 1 / 195</span>
+      <span class="small" id="timer">00:00</span>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="item" id="texto">...</div>
+    <div class="btns">
+      <button class="btn btn-outline" id="btnF">F — Falso</button>
+      <button class="btn" id="btnV">V — Verdadero</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px">
+      <button class="small" id="prev" style="background:none;border:none;cursor:pointer;text-decoration:underline">← Anterior</button>
+      <span class="small">Si dudás, el manual indica marcar F</span>
+    </div>
+  </div>
+
+  <div id="final" class="card hidden">
+    <h1>¡Gracias! Respuestas enviadas</h1>
+    <p class="muted" id="finalMsg">Tu hoja de respuestas fue registrada.</p>
+    <div style="display:grid;gap:10px;margin-top:16px">
+      <button class="btn" id="btnWA">Enviar por WhatsApp al profesional</button>
+      <button class="btn btn-outline" id="btnMail">Enviar por Email al profesional</button>
+      <button class="btn btn-outline" id="btnCSV">Descargar hoja de respuestas (CSV)</button>
+    </div>
+    <p class="small" style="margin-top:14px">Podés cerrar esta ventana.</p>
+  </div>
+</div>
+
+<script>
+// CONFIGURACIÓN - EDITÁ ACÁ TU EMAIL
+const EVALUADOR_EMAIL = "aldomontoya09@gmail.com"; // <-- poné tu email donde querés recibir
+const CODIGO_EVALUADOR = "AM";
+
+// ÍTEMS - Por copyright solo 15 demo. Reemplazá este array por los 195 de tu items.json generado desde tu PDF
+// Formato: {id:1, texto:"..."}
+const ITEMS = [
+  {id:1, text:"Últimamente parece que me quedo sin fuerzas, incluso por la mañana."},
+  {id:2, text:"Siempre me aseguro de que mi trabajo esté bien planeado y organizado."},
+  {id:3, text:"Disfruto haciendo tantas cosas diferentes que no puedo decidir por cuál empezar."},
+  {id:4, text:"Me preocupa que las personas de las que dependo me abandonen."},
+  {id:5, text:"Aunque me da miedo hacer amistades, me gustaría tener más de las que tengo."},
+  {id:6, text:"Raramente exteriorizo los pocos sentimientos que tengo."},
+  {id:7, text:"Me cuesta mantener el equilibrio cuando camino."},
+  {id:8, text:"Siempre busco oportunidades nuevas que me resulten emocionantes."},
+  {id:9, text:"Algunas veces puedo ser bastante duro y desagradable con mi familia."},
+  {id:10, text:"Me gusta ser el centro de atención."},
+  {id:11, text:"De adolescente tuve muchos problemas por mi mal comportamiento en la escuela o instituto."},
+  {id:12, text:"Me da miedo hacerme muy amigo de alguien porque podría acabar sintiéndome ridiculizado o avergonzado."},
+  {id:13, text:"Noto que la gente está hablando de mí cuando paso a su lado."},
+  {id:14, text:"Hace unos años comencé a sentirme un fracasado."},
+  {id:15, text:"Si puedo elegir, prefiero hacer las cosas solo."},
+  {id:16, text:"Últimamente he comenzado a sentir deseos de destrozar cosas."},
+  {id:17, text:"Las cosas que hoy van bien no durarán mucho tiempo."},
+  {id:18, text:"A veces, cuando las cosas empiezan a irme mal, me siento como si estuviera loco o fuera de la realidad."},
+  {id:19, text:"Hago lo que quiero sin preocuparme de las consecuencias que tenga en los demás."},
+  {id:20, text:"Afronto mis actividades diarias con mucha energía y persistencia."},
+  {id:21, text:"Nunca perdono una ofensa ni olvido una situación embarazosa que alguien me haya causado."},
+  {id:22, text:"Me siento extremadamente deprimido y triste gran parte del tiempo."},
+  {id:23, text:"Siempre tiendo a culparme cuando las cosas van mal."},
+  {id:24, text:"Hace mucho tiempo decidí que es mejor tener poca relación con la gente."},
+  {id:25, text:"Tengo un problema con el alcohol que nos ha creado dificultades a mí y a mi familia."},
+  {id:26, text:"Soy una persona socialmente muy reservada y tímida."},
+  {id:27, text:"Muchas veces me siento muy alegre y animado sin ninguna razón."},
+  {id:28, text:"En las últimas semanas me he sentido agotado sin ningún motivo en particular."},
+  {id:29, text:"Mi tiempo es más valioso que el de los demás."},
+  {id:30, text:"Siempre estoy buscando hacer nuevas amistades y conocer gente nueva."},
+  {id:31, text:"Desde hace unas semanas estoy muy nervioso."},
+  {id:32, text:"Simplemente, no he tenido la suerte que otras personas han tenido en la vida."},
+  {id:33, text:"Las ideas me dan vueltas en la cabeza una y otra vez y no desaparecen."},
+  {id:34, text:"Desde hace uno o dos años, al pensar sobre la vida, me siento muy triste y desanimado."},
+  {id:35, text:"Intento hacerlo todo tan perfecto como sea posible."},
+  {id:36, text:"Mi adicción a las drogas hizo que faltara al trabajo."},
+  {id:37, text:"Mi estado de ánimo varía mucho de un día para otro."},
+  {id:38, text:"Utilizo mi encanto para conseguir lo que quiero."},
+  {id:39, text:"A menudo pienso que no merezco las cosas buenas que me pasan."},
+  {id:40, text:"En el pasado me corté o autolesioné a propósito."},
+  {id:41, text:"Tengo la sensación de que no duermo, y me levanto tan cansado como al acostarme."},
+  {id:42, text:"A menudo dejo que los demás tomen por mí decisiones importantes."},
+  {id:43, text:"Parece que pocas cosas me entristecen o me alegran."},
+  {id:44, text:"A menudo tengo pensamientos extraños de los que desearía librarme."},
+  {id:45, text:"Tengo muchos problemas para controlar el impulso de beber alcohol en exceso."},
+  {id:46, text:"Hago amistades con mucha más facilidad que la mayoría de la gente que conozco."},
+  {id:47, text:"Me da vergüenza el maltrato que sufrí cuando era joven."},
+  {id:48, text:"Me parece muy bien que haya normas porque son una buena guía a seguir."},
+  {id:49, text:"El año pasado aparecí en la portada de varias revistas."},
+  {id:50, text:"A menudo me enfado con la gente que hace las cosas lentamente."},
+  {id:51, text:"Me paso la vida preocupándome por una cosa u otra."},
+  {id:52, text:"Siempre me pregunto cuál es la razón real de que alguien sea especialmente agradable conmigo."},
+  {id:53, text:"Mis actividades cotidianas me animan y motivan."},
+  {id:54, text:"Tengo muchas ideas que son avanzadas para los tiempos actuales."},
+  {id:55, text:"Desde que sufrí una conmoción cerebral grave, ya no puedo concentrarme en nada."},
+  {id:56, text:"Antes la gente decía que me interesaba y me entusiasmaba demasiado por muchas cosas."},
+  {id:57, text:"He perdido el apetito por completo, y la mayoría de las noches tengo problemas para dormir."},
+  {id:58, text:"Desde que era niño he ido perdiendo contacto con la realidad."},
+  {id:59, text:"No puedo sentir mucho placer porque no creo que lo merezca."},
+  {id:60, text:"Prefiero que me digan lo que tengo que hacer en lugar de decidir por mí mismo."},
+  {id:61, text:"Consumir drogas me ha causado discusiones con mi familia."},
+  {id:62, text:"El recuerdo de una experiencia muy perturbadora sigue presente en mis pensamientos y me obsesiona."},
+  {id:63, text:"La mayoría de la gente me considera una persona prudente y cuidadosa."},
+  {id:64, text:"Parece que he perdido el interés en la mayoría de las cosas que solía encontrar placenteras, como el sexo."},
+  {id:65, text:"He tenido problemas con la ley un par de veces."},
+  {id:66, text:"He tenido que ser muy duro con algunas personas para mantenerlas a raya."},
+  {id:67, text:"Estoy muy seguro de mí mismo."},
+  {id:68, text:"La gente intenta hacerme creer que estoy loco."},
+  {id:69, text:"Me doy atracones de comida un par de veces a la semana."},
+  {id:70, text:"Frecuentemente siento que no hay nada dentro de mí, como si estuviera vacío y hueco."},
+  {id:71, text:"Siempre me ha resultado difícil dejar de sentirme deprimido y triste."},
+  {id:72, text:"Cuando estoy solo y lejos de casa, a menudo comienzo a sentirme tenso y entro en pánico."},
+  {id:73, text:"La gente dice que soy una persona formal y con valores morales."},
+  {id:74, text:"Me cuesta controlar mi ira."},
+  {id:75, text:"Soy una persona muy optimista."},
+  {id:76, text:"Años después, aún tengo pesadillas sobre un hecho que fue una amenaza real para mi vida."},
+  {id:77, text:"Me parece que necesito que alguien me oriente para hacer las cosas."},
+  {id:78, text:"Recientemente he pensado muy en serio en quitarme la vida."},
+  {id:79, text:"Hay mala gente que intenta llevarse el mérito de lo que he hecho o pensado."},
+  {id:80, text:"Últimamente estoy destrozado."},
+  {id:81, text:"Consumir drogas puede ser irresponsable, pero en el pasado las he necesitado."},
+  {id:82, text:"Soy una persona muy variable, cambio de opinión y sentimientos continuamente."},
+  {id:83, text:"Se me da muy bien inventar excusas cuando me meto en problemas."},
+  {id:84, text:"Cuando estoy en una fiesta, nunca me aíslo de los demás."},
+  {id:85, text:"Parece que echo a perder las buenas oportunidades que se cruzan en mi camino."},
+  {id:86, text:"Algunas veces me provoco el vómito después de comer."},
+  {id:87, text:"Soy una persona especial, así que no me importa lo que piensen los demás."},
+  {id:88, text:"Observo atentamente a mi familia para saber en quién se puede confiar y en quién no."},
+  {id:89, text:"Ciertos pensamientos vuelven a mi mente una y otra vez."},
+  {id:90, text:"Pocas cosas en la vida me resultan placenteras."},
+  {id:91, text:"Me siento agitado y me cuesta conciliar el sueño porque tengo recuerdos dolorosos dando vueltas en mi cabeza."},
+  {id:92, text:"A menudo me pierdo en mis pensamientos y me olvido de lo que está pasando a mi alrededor."},
+  {id:93, text:"Nunca he podido dejar de sentir que no valgo nada para los demás."},
+  {id:94, text:"Tengo un problema con la bebida que he tratado de solucionar sin éxito."},
+  {id:95, text:"Alguien ha estado intentando controlar mi mente."},
+  {id:96, text:"La mayoría de las personas que han triunfado han tenido suerte o han sido deshonestas."},
+  {id:97, text:"A menudo irrito a la gente dándoles órdenes."},
+  {id:98, text:"No he visto un coche en los últimos diez años."},
+  {id:99, text:"Siempre me siento cohibido y tenso en las reuniones sociales."},
+  {id:100, text:"Creo que provoco situaciones en las que resulto herido o me siento rechazado."},
+  {id:101, text:"Me siento profundamente deprimido sin saber por qué."},
+  {id:102, text:"La gente dice que soy una persona delgada, pero creo que mis músculos y mi trasero son demasiado grandes."},
+  {id:103, text:"A menudo disfruto provocando una discusión o una pelea."},
+  {id:104, text:"Tengo mucho cuidado en mantener mi vida como algo privado, para que nadie pueda aprovecharse de mí."},
+  {id:105, text:"El consumo de drogas me ha causado muchos problemas."},
+  {id:106, text:"A menudo me echan la culpa por cosas de las que no soy responsable."},
+  {id:107, text:"Pensar en el futuro al comienzo de cada día me hace sentir extremadamente deprimido."},
+  {id:108, text:"A veces las personas se molestan conmigo porque dicen que hablo mucho o demasiado deprisa."},
+  {id:109, text:"Yo nunca podría arreglármelas solo."},
+  {id:110, text:"Mi cabeza no funciona bien desde que hace unos años tuve una lesión cerebral."},
+  {id:111, text:"Me siento solo y vacío la mayor parte del tiempo."},
+  {id:112, text:"La gente se burla de mí a mis espaldas."},
+  {id:113, text:"Últimamente sudo mucho y me siento muy tenso."},
+  {id:114, text:"Estas últimas semanas me he sentido cada vez más triste."},
+  {id:115, text:"Me enfurezco rápidamente con la gente que me molesta."},
+  {id:116, text:"A veces no he podido pasar el día sin tomar drogas."},
+  {id:117, text:"Me gusta mucho coquetear."},
+  {id:118, text:"Ya no tengo energía para concentrarme en mis responsabilidades diarias."},
+  {id:119, text:"Mis emociones no parecen ser tan intensas como las del resto de la gente."},
+  {id:120, text:"Me siento débil y cansado la mayor parte del tiempo."},
+  {id:121, text:"Ideas extrañas entran en mi mente, dan vueltas y vueltas en mi cabeza, y no desaparecen."},
+  {id:122, text:"Los demás tienen oportunidades que yo no tengo."},
+  {id:123, text:"Repito ciertos comportamientos una y otra vez, algunas veces para reducir mi ansiedad y otras para evitar que pase algo malo."},
+  {id:124, text:"He tomado medicación que no me habían recetado."},
+  {id:125, text:"Mi vida actual todavía se ve afectada por recuerdos e imágenes de algo terrible que me pasó."},
+  {id:126, text:"A menudo echo a perder las cosas buenas que me ocurren."},
+  {id:127, text:"Voces malvadas intentan apoderarse de mi mente."},
+  {id:128, text:"Me siento muy culpable cuando pierdo el control."},
+  {id:129, text:"Mi entusiasmo por el trabajo que hago nunca disminuye."},
+  {id:130, text:"Supongo que no soy diferente de mis padres ya que, en cierto modo, me he convertido en un alcohólico."},
+  {id:131, text:"Últimamente tengo que pensar las cosas una y otra vez sin ningún motivo."},
+  {id:132, text:"Animo a los demás a que admiren lo que digo o hago."},
+  {id:133, text:"Dejo de hacer cosas si tengo que hacerlas solo."},
+  {id:134, text:"He intentado suicidarme."},
+  {id:135, text:"Soy una persona miedosa y reservada."},
+  {id:136, text:"A las personas que supuestamente son mis amigos les gustaría hacerme daño."},
+  {id:137, text:"A menudo me dejo llevar por la rabia y luego me siento muy culpable."},
+  {id:138, text:"A menudo oigo cosas con tanta claridad que me molesta."},
+  {id:139, text:"Aparte de mi familia, tengo muy pocos amigos íntimos."},
+  {id:140, text:"La desorganización me hace sentir muy incómodo."},
+  {id:141, text:"A menudo critico mucho a la gente que me irrita."},
+  {id:142, text:"Tengo muchas cualidades que los demás querrían tener."},
+  {id:143, text:"Terribles acontecimientos de mi pasado reaparecen obsesivamente en mis pensamientos y sueños."},
+  {id:144, text:"Sé que he gastado más dinero en droga del que debería."},
+  {id:145, text:"A menudo, y antes de darme cuenta, me pongo a gritar enfadado a mis amigos y familiares."},
+  {id:146, text:"Me preocupa que mi cuerpo se desgaste rápidamente."},
+  {id:147, text:"Está bien burlar la ley si es poco probable que te atrapen."},
+  {id:148, text:"Creo que hay una conspiración contra mí."},
+  {id:149, text:"Soy una persona solitaria y no me molesta."},
+  {id:150, text:"Todavía me aterrorizo cuando pienso en una experiencia traumática que tuve hace años."},
+  {id:151, text:"Últimamente me he sentido muy culpable porque ya no soy capaz de hacer nada bien."},
+  {id:152, text:"Los castigos nunca me impidieron hacer lo que quería."},
+  {id:153, text:"Pocas veces creo lo que la gente me dice."},
+  {id:154, text:"Soy una persona muy sociable y extrovertida."},
+  {id:155, text:"Me entusiasmo con casi todo lo que hago."},
+  {id:156, text:"Estoy confundido sobre quién soy."},
+  {id:157, text:"Odio pensar en el maltrato que sufrí en mi infancia."},
+  {id:158, text:"Nunca infringiría la ley, aunque pudiera salir impune."},
+  {id:159, text:"Algunos miembros de mi familia dicen que soy egoísta y que solo pienso en mí."},
+  {id:160, text:"En el último año he cruzado el Atlántico en avión 30 veces."},
+  {id:161, text:"Beber alcohol me ayuda cuando me siento deprimido."},
+  {id:162, text:"Preferiría seguir a alguien antes que ser yo el líder."},
+  {id:163, text:"A menudo me vienen ideas a la mente mucho más rápido de lo que puedo expresarlas."},
+  {id:164, text:"A menudo me siento tan mal que quiero hacerme daño de verdad."},
+  {id:165, text:"Algunas personas dicen que soy extraño o raro."},
+  {id:166, text:"A veces encuentro consuelo en mi sufrimiento."},
+  {id:167, text:"A menudo creo que me han tratado injustamente."},
+  {id:168, text:"Muestro mi enfado rápidamente a las personas que no están de acuerdo conmigo."},
+  {id:169, text:"Casi siempre me siento culpable sin ninguna razón aparente."},
+  {id:170, text:"Desde hace algún tiempo me siento triste y deprimido y parece que no consigo animarme."},
+  {id:171, text:"Sé cómo seducir a la gente."},
+  {id:172, text:"Siempre he tenido que estar atento a la gente que intenta engañarme."},
+  {id:173, text:"Siempre estoy dispuesto a aceptar lo que a los demás les gustaría hacer."},
+  {id:174, text:"Afronto todos los retos de la vida con una actitud valiente y enérgica."},
+  {id:175, text:"Nunca siento que tenga algo interesante que aportar a una conversación."},
+  {id:176, text:"Si mi medicamento no me hace efecto, es probable que lo tome con más frecuencia o aumente la dosis."},
+  {id:177, text:"En muchos periodos de mi vida he estado tan animado y he consumido tanta energía que luego me he sentido muy bajo de ánimo."},
+  {id:178, text:"A menudo me siento muy infeliz conmigo mismo."},
+  {id:179, text:"No me gusta cambiar mi rutina."},
+  {id:180, text:"No necesito tener amigos íntimos como tienen los demás."},
+  {id:181, text:"A veces me ha reconfortado herirme físicamente."},
+  {id:182, text:"Mucha gente ha estado espiando mi vida privada durante años."},
+  {id:183, text:"Cuando quiero, se me da bastante bien engañar a la gente."},
+  {id:184, text:"Incluso cuando las cosas van bien, creo que pronto irán mal."},
+  {id:185, text:"Se me da muy bien animar y motivar a los demás."},
+  {id:186, text:"Estoy dispuesto a pasar hambre para estar aún más delgado de lo que estoy."},
+  {id:187, text:"A menudo estoy irritable y de mal humor."},
+  {id:188, text:"Siempre intento acabar mi trabajo antes de dedicar tiempo a actividades de ocio."},
+  {id:189, text:"Solo las personas excepcionales pueden comprender mis capacidades."},
+  {id:190, text:"Realmente no entiendo los sentimientos humanos como los entienden los demás."},
+  {id:191, text:"Demasiadas normas impiden que haga lo que quiero."},
+  {id:192, text:"A veces siento que merezco ser infeliz."},
+  {id:193, text:"He estado abatido y triste gran parte de mi vida."},
+  {id:194, text:"Tiendo a estar de acuerdo con las opiniones de los demás."},
+  {id:195, text:"Evito la mayoría de las situaciones sociales porque creo que la gente me rechazará."},
+];
+
+let idx = 0;
+let respuestas = []; // {id, r:'V'/'F'}
+let startTime = null;
+let timerInt = null;
+
+const $ = s => document.getElementById(s);
+
+function render(){
+  const total = ITEMS.length;
+  $('counter').textContent = `Ítem ${idx+1} / ${total}`;
+  $('texto').textContent = `${ITEMS[idx].id}. ${ITEMS[idx].texto}`;
+  $('bar').style.width = `${((idx)/total*100)}%`;
+  // marcar selección previa
+  const prev = respuestas.find(x=>x.id===ITEMS[idx].id);
+  $('btnV').style.opacity = prev && prev.r==='V' ? '1' : '.85';
+  $('btnF').style.opacity = prev && prev.r==='F' ? '1' : '.85';
+}
+
+$('startBtn').onclick = ()=>{
+  if(!$('acepto').checked){alert('Tenés que aceptar el consentimiento'); return;}
+  if(!$('codigo').value.trim()){alert('Poné tu código/iniciales'); return;}
+  $('setup').classList.add('hidden');
+  $('test').classList.remove('hidden');
+  startTime = Date.now();
+  timerInt = setInterval(()=>{
+    const sec = Math.floor((Date.now()-startTime)/1000);
+    const m = String(Math.floor(sec/60)).padStart(2,'0');
+    const s = String(sec%60).padStart(2,'0');
+    $('timer').textContent = `${m}:${s}`;
+  },1000);
+  render();
+};
+
+function saveResp(r){
+  const id = ITEMS[idx].id;
+  const existing = respuestas.find(x=>x.id===id);
+  if(existing) existing.r = r;
+  else respuestas.push({id, r});
+  if(idx < ITEMS.length-1){ idx++; render(); }
+  else { terminar(); }
+}
+
+$('btnV').onclick = ()=> saveResp('V');
+$('btnF').onclick = ()=> saveResp('F');
+$('prev').onclick = ()=>{
+  if(idx>0){ idx--; render(); }
+};
+
+function terminar(){
+  clearInterval(timerInt);
+  $('test').classList.add('hidden');
+  $('final').classList.remove('hidden');
+  const dur = Math.floor((Date.now()-startTime)/1000);
+  $('finalMsg').textContent = `Completaste ${respuestas.length}/${ITEMS.length} ítems en ${Math.floor(dur/60)}m ${dur%60}s. Código: ${$('codigo').value}`;
+  enviarAutomatico();
+}
+
+function toCSV(){
+  let csv = "id,respuesta,codigo\n";
+  respuestas.forEach(o=> csv += `${o.id},${o.r},${o.r==='V'?1:0}\n`);
+  return csv;
+}
+
+function enviarAutomatico(){
+  // Intento de envío automático a tu email vía formsubmit.co (gratis, sin backend)
+  const payload = {
+    codigo: $('codigo').value,
+    evaluador: CODIGO_EVALUADOR,
+    fecha: new Date().toISOString(),
+    total: ITEMS.length,
+    respuestas: respuestas,
+    csv: toCSV()
+  };
+  if(EVALUADOR_EMAIL && EVALUADOR_EMAIL.includes('@')){
+    fetch(`https://formsubmit.co/ajax/${EVALUADOR_EMAIL}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify({
+        subject:`MCMI-IV Hoja respuestas - ${payload.codigo}`,
+        codigo: payload.codigo,
+        total: payload.total,
+        respuestas: JSON.stringify(payload.respuestas),
+        csv: payload.csv
+      })
+    }).then(r=> console.log('Enviado a', EVALUADOR_EMAIL)).catch(()=>{});
+  }
+}
+
+$('btnCSV').onclick = ()=>{
+  const blob = new Blob([toCSV()], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=`MCMI-IV_${$('codigo').value}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+};
+
+$('btnWA').onclick = ()=>{
+  const txt = encodeURIComponent(`MCMI-IV Completado - Código ${$('codigo').value}\nTotal: ${respuestas.length}/${ITEMS.length}\n\nRespuestas: ${JSON.stringify(respuestas)}\n\nCSV:\n${toCSV()}`);
+  window.open(`https://wa.me/?text=${txt}`, '_blank');
+};
+
+$('btnMail').onclick = ()=>{
+  const subject = encodeURIComponent(`MCMI-IV Hoja respuestas - ${$('codigo').value}`);
+  const body = encodeURIComponent(`Código: ${$('codigo').value}\nTotal: ${respuestas.length}/${ITEMS.length}\nFecha: ${new Date().toLocaleString()}\n\nCSV:\n${toCSV()}\n\nJSON:\n${JSON.stringify(respuestas,null,2)}`);
+  window.location.href = `mailto:${EVALUADOR_EMAIL}?subject=${subject}&body=${body}`;
+};
+</script>
+</body>
+</html>
