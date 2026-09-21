@@ -10,7 +10,33 @@ from pathlib import Path
 import streamlit as st
 
 st.set_page_config(page_title="Evaluaciones Psicologicas Forenses - V10 MCMI-IV + Consignas", page_icon="⚖️", layout="wide")
-hide_style = """<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>"""
+hide_style = """
+<style>
+#MainMenu {visibility: hidden;} 
+footer {visibility: hidden;} 
+header {visibility: hidden;}
+
+/* AUMENTAR LETRA PANEL LATERAL */
+[data-testid="stSidebar"] h1 {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+}
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    font-size: 22px !important;
+}
+[data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p {
+    font-size: 18px !important;
+    line-height: 1.4 !important;
+}
+[data-testid="stSidebar"] .stRadio label {
+    font-size: 19px !important;
+    font-weight: 600 !important;
+}
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label p {
+    font-size: 18px !important;
+}
+</style>
+"""
 st.markdown(hide_style, unsafe_allow_html=True)
 
 CONTRASEÑA_MAESTRA = "MiClavePericial2026"
